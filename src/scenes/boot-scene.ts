@@ -59,9 +59,12 @@ export class BootScene extends Phaser.Scene {
    */
   private loadAssets() {
     // Load sample assets
+    this.load.json('spyReportData', 'https://spreadsheets.google.com/feeds/cells/1RtLItonFBm_EEBVBq0Dm_Ed02EjTtDDj7tzx6W4p5uk/1/public/full?alt=json')
 
     // Source: Open Game Art
     this.load.image('man', 'assets/character.png')
+    this.load.image('hexagon', 'assets/hexagon.png')
+    this.load.image('marker', 'assets/marker.png')
   }
 
 }

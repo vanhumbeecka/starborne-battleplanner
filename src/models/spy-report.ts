@@ -1,5 +1,6 @@
 import * as moment from 'moment-timezone'
-import {Pixel} from './pixel'
+import {Coordinate} from './Coordinate'
+import { parseCoordinates } from '../utils/spy-report-generator'
 
 export interface RawSpyReport {
   id: string
@@ -21,38 +22,19 @@ export class SpyReport {
     const submitted = moment(input.dateSubmitted, 'MM/DD/YYYY HH:mm:ss').tz('America/New_York')
     const isPlayer = input.whoSpied === 'Player'
     const captureDefense = input.captureDefense
-    const coordinates: Pixel | undefined = SpyReport.parseCoordinates(input.spyReportHeader)
+    const coordinates: Coordinate | undefined = parseCoordinates(input.spyReportHeader)
     if (!coordinates) {
-      console.error(`Incomplete spy report with id ${input.id}. Aborting`)
+      console.warn(`Incomplete spy report with id ${input.id}. Skipping this report`)
       return undefined
     }
     return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense)
   }
 
-  static parseCoordinates(raw: string): Pixel | undefined {
-    const coordStringRegex = /(\(.+\))/
-    const result = coordStringRegex.exec(raw)
-    if (!result || result.length === 0) {
-      console.error(`Could not parse coordinates from string: "${raw}"`)
-      return undefined
-    }
-    const group = result[0]
-    const coords = group
-      .replace('(', '')
-      .replace(')', '')
-      .split(',')
-    if (coords.length !== 2) {
-      console.error(`Could not parse coordinates from string: "${raw}"`)
-      return new Pixel(0, 0)
-    }
-    return new Pixel(Number(coords[0]), Number(coords[1]))
-  }
-
-  constructor(private id: number,
-              private submitted: moment.Moment,
-              private isPlayer: boolean,
-              private coordinates: Pixel,
-              private captureDefense: string
+  constructor(public readonly id: number,
+              public readonly submitted: moment.Moment,
+              public readonly isPlayer: boolean,
+              public readonly coordinates: Coordinate,
+              public readonly captureDefense: string
   ) {
     // TODO: private stationResources: string[],
     // private stationLabor: string[],

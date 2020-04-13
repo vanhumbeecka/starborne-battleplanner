@@ -51,12 +51,12 @@ export class HexagonGrid {
 
   outerHexes(): Hexagon[] {
     return [
-      this.get(0, this.depth),
-      this.get(0, -this.depth),
-      this.get(-this.depth, 0),
       this.get(this.depth, 0),
+      this.get(0, this.depth),
+      this.get(-this.depth, this.depth),
+      this.get(-this.depth, 0),
+      this.get(0, -this.depth),
       this.get(this.depth, -this.depth),
-      this.get(-this.depth, this.depth)
     ]
   }
 

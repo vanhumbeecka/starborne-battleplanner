@@ -4,7 +4,7 @@
   "description": "Starborne BattlePlanner",
   "main": "src/main.ts",
   "author": "Andries Van Humbeeck",
-  "license": "None",
+  "license": "MIT",
   "private": false,
   "scripts": {
     "build": "webpack",
