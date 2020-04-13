@@ -739,6 +739,13 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var SpyReportText = /** @class */ (function (_super) {
     __extends(SpyReportText, _super);
@@ -751,8 +758,35 @@ var SpyReportText = /** @class */ (function (_super) {
         if (!reports || reports.length === 0) {
             return;
         }
-        var report = reports[reports.length - 1]; // last report for now
-        this.setText([report.id.toString(), report.coordinates.toString(), report.submitted.fromNow(), report.captureDefense]);
+        reports.sort(function (a, b) {
+            if (a.submitted.isAfter(b.submitted)) {
+                return -1;
+            }
+            else if (a.submitted.isSame(b.submitted)) {
+                return 0;
+            }
+            else {
+                return 1;
+            }
+        });
+        var lastReport = reports[0];
+        this.setText(__spreadArrays([
+            lastReport.stationName + " " + lastReport.coordinates.toString(),
+            '',
+            '---',
+            '',
+            "Spied " + reports.length + " times.",
+            "Last report " + lastReport.submitted.fromNow(),
+            "report IDs (" + reports.map(function (r) { return r.id; }).join(', ') + ")",
+            '',
+            '---',
+            '',
+            lastReport.captureDefense,
+            lastReport.stationLabour,
+            ''
+        ], reports.map(function (r) { return "(" + r.submitted.fromNow() + ") Metal: " + r.stationResources.metal + " - Gas: " + r.stationResources.gas + " - Crystal: " + r.stationResources.crystal; }), [
+            ''
+        ]));
     };
     SpyReportText.prototype.removeReports = function () {
         this.setText('');
@@ -1023,16 +1057,18 @@ exports.Pixel = Pixel;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var moment = __webpack_require__(/*! moment-timezone */ "./node_modules/moment-timezone/index.js");
-var spy_report_generator_1 = __webpack_require__(/*! ../utils/spy-report-generator */ "./src/utils/spy-report-generator.ts");
+var spy_report_utils_1 = __webpack_require__(/*! ../utils/spy-report-utils */ "./src/utils/spy-report-utils.ts");
 var SpyReport = /** @class */ (function () {
-    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense) {
+    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources) {
         this.id = id;
         this.submitted = submitted;
         this.isPlayer = isPlayer;
         this.coordinates = coordinates;
         this.captureDefense = captureDefense;
+        this.stationName = stationName;
+        this.stationLabour = stationLabour;
+        this.stationResources = stationResources;
         // TODO: private stationResources: string[],
-        // private stationLabor: string[],
         // private buildings: string[],
         // private hiddenResources: string[],
         // private outposts: string[],
@@ -1040,16 +1076,19 @@ var SpyReport = /** @class */ (function () {
         // private hangar: string[]
     }
     SpyReport.fromRawReport = function (input) {
-        var id = Number(input.id);
-        var submitted = moment(input.dateSubmitted, 'MM/DD/YYYY HH:mm:ss').tz('America/New_York');
-        var isPlayer = input.whoSpied === 'Player';
-        var captureDefense = input.captureDefense;
-        var coordinates = spy_report_generator_1.parseCoordinates(input.spyReportHeader);
+        var coordinates = spy_report_utils_1.parseCoordinates(input.spyReportHeader);
         if (!coordinates) {
             console.warn("Incomplete spy report with id " + input.id + ". Skipping this report");
             return undefined;
         }
-        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense);
+        var id = Number(input.id);
+        var submitted = moment(input.dateSubmitted, 'MM/DD/YYYY HH:mm:ss').tz('America/New_York');
+        var isPlayer = input.whoSpied === 'Player';
+        var captureDefense = input.captureDefense;
+        var stationName = spy_report_utils_1.parseStationName(input.spyReportHeader);
+        var stationLabour = input.stationLabour;
+        var stationResources = spy_report_utils_1.parseStationResources(input.stationResources);
+        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources);
     };
     return SpyReport;
 }());
@@ -1173,7 +1212,7 @@ var hexagon_grid_container_1 = __webpack_require__(/*! ../game-objects/hexagon-g
 var coordinate_text_1 = __webpack_require__(/*! ../game-objects/coordinate-text */ "./src/game-objects/coordinate-text.ts");
 var EventBus_1 = __webpack_require__(/*! ../game-objects/events/EventBus */ "./src/game-objects/events/EventBus.ts");
 var spy_report_map_1 = __webpack_require__(/*! ../game-objects/spy-report-map */ "./src/game-objects/spy-report-map.ts");
-var spy_report_generator_1 = __webpack_require__(/*! ../utils/spy-report-generator */ "./src/utils/spy-report-generator.ts");
+var spy_report_utils_1 = __webpack_require__(/*! ../utils/spy-report-utils */ "./src/utils/spy-report-utils.ts");
 var spy_report_text_1 = __webpack_require__(/*! ../game-objects/spy-report-text */ "./src/game-objects/spy-report-text.ts");
 var Coordinate_1 = __webpack_require__(/*! ../models/Coordinate */ "./src/models/Coordinate.ts");
 var Color = Phaser.Display.Color;
@@ -1205,8 +1244,8 @@ var HexagonScene = /** @class */ (function (_super) {
         this.cameras.main.backgroundColor = new Color(0, 0, 0);
         // models
         var grid = hexagon_grid_1.HexagonGrid.fromGameWidth(500, this.width / 2);
-        var spyReports = spy_report_generator_1.generateReports(this.cache.json.get('spyReportData'));
-        var spyReportsByCoordinate = spy_report_generator_1.binSpyReportsByCoordinate(spyReports);
+        var spyReports = spy_report_utils_1.generateReports(this.cache.json.get('spyReportData'));
+        var spyReportsByCoordinate = spy_report_utils_1.binSpyReportsByCoordinate(spyReports);
         // game objects
         var gridGameObject = hexagon_grid_container_1.HexagonGridGameObject.fromGrid(this, grid, spyReportsByCoordinate);
         var coordinateText = new coordinate_text_1.CoordinateTextGameObject(this, 10, 10);
@@ -1381,10 +1420,10 @@ exports.MenuButton = MenuButton;
 
 /***/ }),
 
-/***/ "./src/utils/spy-report-generator.ts":
-/*!*******************************************!*\
-  !*** ./src/utils/spy-report-generator.ts ***!
-  \*******************************************/
+/***/ "./src/utils/spy-report-utils.ts":
+/*!***************************************!*\
+  !*** ./src/utils/spy-report-utils.ts ***!
+  \***************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1432,6 +1471,28 @@ exports.parseCoordinates = function (raw) {
         return new Coordinate_1.Coordinate(0, 0);
     }
     return new Coordinate_1.Coordinate(Number(coords[0]), Number(coords[1]));
+};
+exports.parseStationName = function (raw) {
+    var regex = /\(.+\)\s(.+)\scompleted/;
+    var result = regex.exec(raw);
+    if (!result || result.length === 0) {
+        console.error("Could not parse station name from string: \"" + raw + "\"");
+        return '';
+    }
+    return result[1];
+};
+exports.parseStationResources = function (raw) {
+    var regex = /Metal\s([0-9]+)\s.*Gas\s([0-9]+)\s.*Crystal\s([0-9]+)\s/;
+    var result = regex.exec(raw);
+    if (!result || result.length === 0) {
+        console.error("Could not parse resources from string: \"" + raw + "\"");
+        return undefined;
+    }
+    return {
+        metal: Number(result[1]),
+        gas: Number(result[2]),
+        crystal: Number(result[3])
+    };
 };
 exports.generateReports = function (input) {
     var cells = input.feed.entry.map(function (e) { return e.gs$cell; });
