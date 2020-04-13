@@ -1,5 +1,5 @@
 import {GoogleSheetResponse, GsCell} from '../clients/google-sheet-response'
-import {SpyReport} from '../models/spy-report'
+import {Resources, SpyReport} from '../models/spy-report'
 import {TupleMap} from './tuple-map'
 import {Coordinate} from '../models/Coordinate'
 
@@ -36,6 +36,31 @@ export const parseCoordinates = (raw: string): Coordinate | undefined => {
     return new Coordinate(0, 0)
   }
   return new Coordinate(Number(coords[0]), Number(coords[1]))
+}
+
+export const parseStationName = (raw: string): string => {
+  const regex = /\(.+\)\s(.+)\scompleted/
+  const result = regex.exec(raw)
+  if (!result || result.length === 0) {
+    console.error(`Could not parse station name from string: "${raw}"`)
+    return ''
+  }
+  return result[1]
+}
+
+export const parseStationResources = (raw: string): Resources | undefined => {
+  const regex = /Metal\s([0-9]+)\s.*Gas\s([0-9]+)\s.*Crystal\s([0-9]+)\s/
+  const result = regex.exec(raw)
+  if (!result || result.length === 0) {
+    console.error(`Could not parse resources from string: "${raw}"`)
+    return undefined
+  }
+
+  return {
+    metal: Number(result[1]),
+    gas: Number(result[2]),
+    crystal: Number(result[3])
+  }
 }
 
 export const generateReports = (input: GoogleSheetResponse): SpyReport[] => {
