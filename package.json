@@ -1,0 +1,39 @@
+{
+  "name": "starborne-battleplanner",
+  "version": "1.0.0",
+  "description": "Starborne BattlePlanner",
+  "main": "src/main.ts",
+  "author": "Andries Van Humbeeck",
+  "license": "None",
+  "private": false,
+  "scripts": {
+    "build": "webpack",
+    "dev": "webpack-dev-server",
+    "test": "mocha -r ts-node/register 'test/**/*.spec.ts'"
+  },
+  "dependencies": {
+    "moment": "^2.24.0",
+    "moment-timezone": "^0.5.28",
+    "node-fetch": "^2.6.0",
+    "phaser": "^3.20.1",
+    "phaser-plugin-debug-draw": "^4.6.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^7.0.2",
+    "@types/moment": "^2.13.0",
+    "@types/moment-timezone": "^0.5.13",
+    "@types/node-fetch": "^2.5.6",
+    "chai": "^4.2.0",
+    "copy-webpack-plugin": "^4.6.0",
+    "mocha": "^7.1.1",
+    "ts-loader": "^5.3.3",
+    "ts-node": "^8.8.2",
+    "tslint": "^5.12.1",
+    "typescript": "^3.7.2",
+    "typescript-tslint-plugin": "^0.3.1",
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.2.3",
+    "webpack-dev-server": "^3.1.14"
+  }
+}
