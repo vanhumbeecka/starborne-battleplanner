@@ -783,13 +783,35 @@ var SpyReportText = /** @class */ (function (_super) {
             '',
             lastReport.captureDefense,
             lastReport.stationLabour,
-            ''
-        ], reports.map(function (r) { return "(" + r.submitted.fromNow() + ") Metal: " + r.stationResources.metal + " - Gas: " + r.stationResources.gas + " - Crystal: " + r.stationResources.crystal; }), [
-            ''
-        ]));
+            '',
+            'Station Resources:'
+        ], this.displayResources(reports), [
+            '',
+            'Station Hidden Resources:'
+        ], this.displayResources(reports, true)));
     };
     SpyReportText.prototype.removeReports = function () {
         this.setText('');
+    };
+    SpyReportText.prototype.displayResources = function (reports, isHidden) {
+        var _this = this;
+        if (isHidden === void 0) { isHidden = false; }
+        return reports.map(function (r) {
+            var resources;
+            if (isHidden) {
+                resources = r.stationHiddenResources;
+            }
+            else {
+                resources = r.stationResources;
+            }
+            if (resources.isNone) {
+                return "(" + r.submitted.fromNow() + ") None";
+            }
+            return _this.getResourcesString(r.submitted.fromNow(), resources);
+        });
+    };
+    SpyReportText.prototype.getResourcesString = function (fromNow, resources) {
+        return "(" + fromNow + ") Metal: " + resources.metal + " - Gas: " + resources.gas + " - Crystal: " + resources.crystal;
     };
     return SpyReportText;
 }(Phaser.GameObjects.Text));
@@ -1059,7 +1081,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var moment = __webpack_require__(/*! moment-timezone */ "./node_modules/moment-timezone/index.js");
 var spy_report_utils_1 = __webpack_require__(/*! ../utils/spy-report-utils */ "./src/utils/spy-report-utils.ts");
 var SpyReport = /** @class */ (function () {
-    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources) {
+    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources) {
         this.id = id;
         this.submitted = submitted;
         this.isPlayer = isPlayer;
@@ -1068,6 +1090,7 @@ var SpyReport = /** @class */ (function () {
         this.stationName = stationName;
         this.stationLabour = stationLabour;
         this.stationResources = stationResources;
+        this.stationHiddenResources = stationHiddenResources;
         // TODO: private stationResources: string[],
         // private buildings: string[],
         // private hiddenResources: string[],
@@ -1088,7 +1111,8 @@ var SpyReport = /** @class */ (function () {
         var stationName = spy_report_utils_1.parseStationName(input.spyReportHeader);
         var stationLabour = input.stationLabour;
         var stationResources = spy_report_utils_1.parseStationResources(input.stationResources);
-        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources);
+        var stationHiddenResources = spy_report_utils_1.parseStationResources(input.stationHiddenResources);
+        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources);
     };
     return SpyReport;
 }());
@@ -1482,6 +1506,14 @@ exports.parseStationName = function (raw) {
     return result[1];
 };
 exports.parseStationResources = function (raw) {
+    if (raw.startsWith('None')) {
+        return {
+            isNone: true,
+            crystal: 0,
+            metal: 0,
+            gas: 0
+        };
+    }
     var regex = /Metal\s([0-9]+)\s.*Gas\s([0-9]+)\s.*Crystal\s([0-9]+)\s/;
     var result = regex.exec(raw);
     if (!result || result.length === 0) {
@@ -1489,6 +1521,7 @@ exports.parseStationResources = function (raw) {
         return undefined;
     }
     return {
+        isNone: false,
         metal: Number(result[1]),
         gas: Number(result[2]),
         crystal: Number(result[3])
@@ -1515,6 +1548,7 @@ var generateSpyReport = function (cells, col) {
     var captureDefense = findCellDataByRow(reportCells, 10);
     var stationResources = findCellDataByRow(reportCells, 12);
     var stationLabour = findCellDataByRow(reportCells, 14);
+    var stationHiddenResourcesArray = findCellDataBetweenContent(reportCells, 'Station Hidden Resources', 'Outposts');
     // TODO: buildings, fleets, hangar, ...
     return spy_report_1.SpyReport.fromRawReport({
         id: id,
@@ -1526,7 +1560,8 @@ var generateSpyReport = function (cells, col) {
         spyReportHeader2: spyReportHeader2,
         captureDefense: captureDefense,
         stationResources: stationResources,
-        stationLabour: stationLabour
+        stationLabour: stationLabour,
+        stationHiddenResources: stationHiddenResourcesArray[0]
     });
 };
 var findCellDataByRow = function (cells, row) {
@@ -1535,6 +1570,15 @@ var findCellDataByRow = function (cells, row) {
         return undefined;
     }
     return cell.inputValue;
+};
+var findCellDataBetweenContent = function (cells, fromStartsWith, toStartsWith) {
+    var cellIndexStart = cells.findIndex(function (c) { return c.inputValue.startsWith(fromStartsWith); });
+    var cellIndexEnd = cells.findIndex(function (c) { return c.inputValue.startsWith(toStartsWith); });
+    var results = cells.slice(cellIndexStart + 1, cellIndexEnd);
+    if (!results) {
+        return [];
+    }
+    return results.map(function (r) { return r.inputValue; });
 };
 
 
