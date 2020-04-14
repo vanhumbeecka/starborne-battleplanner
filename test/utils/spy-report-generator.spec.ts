@@ -1,7 +1,13 @@
-import {generateReports, parseCoordinates, parseStationResources, parseStationName} from '../../src/utils/spy-report-utils'
+import {
+  parseCoordinates, parseFleets,
+  parseOutposts,
+  parseStationName,
+  parseStationResources
+} from '../../src/utils/spy-report-utils'
 import {testData} from '../data'
-import {SpyReport} from '../../src/models/spy-report'
+import {SpyReport} from '../../src/models/spy-report/spy-report'
 import {assert, expect} from 'chai'
+import {generateReports} from '../../src/utils/spy-report-factory'
 
 describe('SpyReportGeneration', () => {
 
@@ -36,6 +42,40 @@ describe('SpyReportGeneration', () => {
     })
   })
 
+  describe('when parsing outposts from string array', () => {
+    const outposts: string[] = [
+      'Mining Facility - Level 4 - Operational',
+      'Fortress - Level 2 - Operational',
+      'Heavy Ship Assembly - Level 1 - Operational'
+    ]
+
+    it('should parse outposts correctly', () => {
+      const parsed = parseOutposts(outposts)
+
+      expect(parsed).to.not.be.undefined
+      expect(parsed).to.have.length(3)
+      expect(parsed[1].name).to.equal('Fortress')
+      expect(parsed[1].level).to.equal('Level 2')
+    })
+  })
+
+  describe('when parsing fleets from string array', () => {
+    const fleets: string[] = [
+      '30 Patrol Ships',
+      '53 Patrol Ships',
+      '43 Industrials',
+      '44 Scouts'
+    ]
+
+    it('should parse fleets correctly', () => {
+      const parsed = parseFleets(fleets)
+
+      expect(parsed).to.have.length(4)
+      expect(parsed[0].count).to.equal(30)
+      expect(parsed[0].type).to.equal('Patrol Ships')
+    })
+  })
+
   describe('when parsing resources from string', () => {
     const raw = 'Metal 0 	Gas 1 	Crystal 20 	'
 
@@ -48,6 +88,4 @@ describe('SpyReportGeneration', () => {
       expect(resources.crystal).to.equal(20)
     })
   })
-
-
 })

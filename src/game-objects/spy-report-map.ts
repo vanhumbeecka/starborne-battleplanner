@@ -1,4 +1,4 @@
-import {SpyReport} from '../models/spy-report'
+import {SpyReport} from '../models/spy-report/spy-report'
 import {Hexagon} from '../models/hexagon'
 import {Coordinate} from '../models/Coordinate'
 import {HexagonGrid} from '../models/hexagon-grid'

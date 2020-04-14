@@ -1,5 +1,7 @@
 import Scene = Phaser.Scene
-import {Resources, SpyReport} from '../models/spy-report'
+import {SpyReport} from '../models/spy-report/spy-report'
+import {Resources} from '../models/spy-report/content'
+import {flatMap} from 'lodash'
 
 export class SpyReportText extends Phaser.GameObjects.Text {
 
@@ -29,22 +31,34 @@ export class SpyReportText extends Phaser.GameObjects.Text {
     this.setText([
       `${lastReport.stationName} ${lastReport.coordinates.toString()}`,
       '',
-      '---',
+      '===',
       '',
       `Spied ${reports.length} times.`,
       `Last report ${lastReport.submitted.fromNow()}`,
       `report IDs (${reports.map(r => r.id).join(', ')})`,
       '',
-      '---',
-      '',
       lastReport.captureDefense,
       lastReport.stationLabour,
       '',
-      'Station Resources:',
+      '',
+      '=== Resources ===',
+      '',
       ...this.displayResources(reports),
       '',
-      'Station Hidden Resources:',
-      ...this.displayResources(reports, true)
+      'Hidden Resources',
+      ...this.displayResources(reports, true),
+      '',
+      '',
+      `=== Outposts (${lastReport.submitted.fromNow()}) ===`,
+      '',
+      ...this.displayOutposts(lastReport),
+      '',
+      '',
+      '=== Fleets ===',
+      '',
+      ...this.displayFleets(reports),
+      '',
+      ''
     ])
   }
 
@@ -64,6 +78,21 @@ export class SpyReportText extends Phaser.GameObjects.Text {
         return `(${r.submitted.fromNow()}) None`
       }
       return this.getResourcesString(r.submitted.fromNow(), resources)
+    })
+  }
+
+  private displayOutposts(report: SpyReport): string[] {
+    return report.outposts.map(o => `${o.name} - ${o.level}`)
+  }
+
+  private displayFleets(reports: SpyReport[]): string[] {
+    return flatMap(reports, (report) => {
+      if (report.fleets.length === 0) { return [] }
+      return [
+        `(${report.submitted.fromNow()})`,
+        ...report.fleets.map(f => `${f.count} ${f.type}`),
+        ''
+      ]
     })
   }
 

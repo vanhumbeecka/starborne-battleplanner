@@ -1,6 +1,13 @@
 import * as moment from 'moment-timezone'
-import {Coordinate} from './Coordinate'
-import {parseCoordinates, parseStationResources, parseStationName} from '../utils/spy-report-utils'
+import {Coordinate} from '../Coordinate'
+import {
+  parseCoordinates,
+  parseFleets,
+  parseOutposts,
+  parseStationName,
+  parseStationResources
+} from '../../utils/spy-report-utils'
+import {Building, Fleet, Resources} from './content'
 
 export interface RawSpyReport {
   id: string
@@ -13,14 +20,10 @@ export interface RawSpyReport {
   captureDefense: string
   stationResources: string
   stationLabour: string,
-  stationHiddenResources: string
-}
-
-export interface Resources {
-  isNone: boolean
-  metal: number
-  gas: number
-  crystal: number
+  stationHiddenResources: string,
+  outposts: string[]
+  fleets: string[],
+  hangar: string[]
 }
 
 export class SpyReport {
@@ -40,6 +43,9 @@ export class SpyReport {
     const stationLabour = input.stationLabour
     const stationResources = parseStationResources(input.stationResources)
     const stationHiddenResources = parseStationResources(input.stationHiddenResources)
+    const outposts = parseOutposts(input.outposts)
+    const fleets = parseFleets(input.fleets)
+    const hangar = parseFleets(input.hangar)
 
     return new SpyReport(
       id,
@@ -50,7 +56,10 @@ export class SpyReport {
       stationName,
       stationLabour,
       stationResources,
-      stationHiddenResources
+      stationHiddenResources,
+      outposts,
+      fleets,
+      hangar
     )
   }
 
@@ -62,7 +71,10 @@ export class SpyReport {
               public readonly stationName: string,
               public readonly stationLabour: string,
               public readonly stationResources: Resources,
-              public readonly stationHiddenResources: Resources
+              public readonly stationHiddenResources: Resources,
+              public readonly outposts: Building[],
+              public readonly fleets: Fleet[],
+              public readonly hangar: Fleet[]
   ) {
     // TODO: private stationResources: string[],
     // private buildings: string[],

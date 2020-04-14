@@ -3,7 +3,7 @@ import {Pixel} from '../models/pixel'
 import {getGameCenterX, getGameCenterY} from '../helpers'
 import {HexagonGridOutlineGameObject} from './hexagon-grid-outline'
 import {eventBus, EventBus} from './events/EventBus'
-import {SpyReport} from '../models/spy-report'
+import {SpyReport} from '../models/spy-report/spy-report'
 import {TupleMap} from '../utils/tuple-map'
 import Scene = Phaser.Scene
 import {SpyReportMapGameObject} from './spy-report-map'

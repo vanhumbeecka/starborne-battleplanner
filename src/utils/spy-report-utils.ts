@@ -1,7 +1,8 @@
-import {GoogleSheetResponse, GsCell} from '../clients/google-sheet-response'
-import {Resources, SpyReport} from '../models/spy-report'
+import {GsCell} from '../clients/google-sheet-response'
+import {SpyReport} from '../models/spy-report/spy-report'
 import {TupleMap} from './tuple-map'
 import {Coordinate} from '../models/Coordinate'
+import {Building, Fleet, Resources} from '../models/spy-report/content'
 
 export const binSpyReportsByCoordinate = (spyReports: SpyReport[]): TupleMap<SpyReport[]> => {
   const map = new TupleMap<SpyReport[]>()
@@ -48,6 +49,42 @@ export const parseStationName = (raw: string): string => {
   return result[1]
 }
 
+export const parseOutposts = (raw: string[]): Building[] => {
+  const regex = new RegExp('^(.+)\\s-\\s(Level\\s[0-9\\?])')
+  const buildings: Array<Building | undefined> = raw.map(r => {
+    const output = regex.exec(r)
+    if (!output || output.length !== 3) {
+      console.error('Could not parse outpost for raw: ' + raw.join(' -- '))
+      return undefined
+    }
+    return {
+      name: output[1],
+      level: output[2]
+    } as Building
+  })
+  return buildings.filter(b => !!b)
+}
+
+export const parseFleets = (raw: string[]): Fleet[] => {
+  const regex = /^([0-9]+)\s(.+)$/
+  const result = raw.map(r => {
+    const output = regex.exec(r)
+    if (!output || output.length === 0) {
+      console.error('Could not parse fleet string: ' + raw.join(' -- '))
+      return undefined
+    }
+    return {
+      count: Number(output[1]),
+      type: output[2]
+    } as Fleet
+  })
+  return result.filter(r => !!r)
+}
+
+export const parseHangar = (raw: string[]): Fleet[] => {
+  return []
+}
+
 export const parseStationResources = (raw: string): Resources | undefined => {
   if (raw.startsWith('None')) {
     return {
@@ -73,52 +110,7 @@ export const parseStationResources = (raw: string): Resources | undefined => {
   }
 }
 
-export const generateReports = (input: GoogleSheetResponse): SpyReport[] => {
-  const cells: GsCell[] = input.feed.entry.map(e => e.gs$cell)
-
-  // Eastern Time (US > UTC-4)
-  const row2cells = cells.filter(c => Number(c.row) === 2)
-  const idCells = row2cells.filter(c => !!c && Number(c.col) >= 4)
-  const spyReportColumns: number[] = idCells.map(c => Number(c.col))
-
-  const reports = spyReportColumns.map(col => generateSpyReport(cells, col))
-  return reports.filter(r => !!r)
-}
-
-const generateSpyReport = (cells: GsCell[], col: number): SpyReport | undefined => {
-  const reportCells = cells.filter(c => Number(c.col) === col)
-
-  const id = findCellDataByRow(reportCells, 2)
-  const dateSubmitted = findCellDataByRow(reportCells, 3)
-  const whoSubmitted = findCellDataByRow(reportCells, 4)
-  const dateSpied = findCellDataByRow(reportCells, 5)
-  const whoSpied = findCellDataByRow(reportCells, 6)
-  const spyReportHeader = findCellDataByRow(reportCells, 7)
-  const spyReportHeader2 = findCellDataByRow(reportCells, 8)
-  const captureDefense = findCellDataByRow(reportCells, 10)
-  const stationResources = findCellDataByRow(reportCells, 12)
-  const stationLabour = findCellDataByRow(reportCells, 14)
-
-  const stationHiddenResourcesArray = findCellDataBetweenContent(reportCells, 'Station Hidden Resources', 'Outposts')
-
-  // TODO: buildings, fleets, hangar, ...
-
-  return SpyReport.fromRawReport({
-    id,
-    dateSubmitted,
-    whoSubmitted,
-    dateSpied,
-    whoSpied,
-    spyReportHeader,
-    spyReportHeader2,
-    captureDefense,
-    stationResources,
-    stationLabour,
-    stationHiddenResources: stationHiddenResourcesArray[0]
-  })
-}
-
-const findCellDataByRow = (cells: GsCell[], row: number): string | undefined => {
+export const findCellDataByRow = (cells: GsCell[], row: number): string | undefined => {
   const cell = cells.find(c => Number(c.row) === row)
   if (!cell) {
     return undefined
@@ -126,7 +118,7 @@ const findCellDataByRow = (cells: GsCell[], row: number): string | undefined => 
   return cell.inputValue
 }
 
-const findCellDataBetweenContent = (cells: GsCell[], fromStartsWith: string, toStartsWith: string): string[] => {
+export const findCellDataBetweenContent = (cells: GsCell[], fromStartsWith: string, toStartsWith: string): string[] => {
   const cellIndexStart = cells.findIndex(c => c.inputValue.startsWith(fromStartsWith))
   const cellIndexEnd = cells.findIndex(c => c.inputValue.startsWith(toStartsWith))
 

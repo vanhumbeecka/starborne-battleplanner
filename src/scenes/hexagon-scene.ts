@@ -5,13 +5,14 @@ import {HexagonGridGameObject} from '../game-objects/hexagon-grid-container'
 import {CoordinateTextGameObject} from '../game-objects/coordinate-text'
 import {eventBus} from '../game-objects/events/EventBus'
 import {SpyReportMapGameObject} from '../game-objects/spy-report-map'
-import {SpyReport} from '../models/spy-report'
-import {binSpyReportsByCoordinate, generateReports} from '../utils/spy-report-utils'
+import {SpyReport} from '../models/spy-report/spy-report'
+import {binSpyReportsByCoordinate} from '../utils/spy-report-utils'
 import {TupleMap} from '../utils/tuple-map'
 import {SpyReportText} from '../game-objects/spy-report-text'
 import {Scene} from 'phaser'
 import {Coordinate} from '../models/Coordinate'
 import Color = Phaser.Display.Color
+import {generateReports} from '../utils/spy-report-factory'
 
 const sceneConfig: Phaser.Types.Scenes.SettingsConfig = {
   active: false,
