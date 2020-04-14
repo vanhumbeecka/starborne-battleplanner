@@ -12,10 +12,12 @@ export interface RawSpyReport {
   spyReportHeader2: string
   captureDefense: string
   stationResources: string
-  stationLabour: string
+  stationLabour: string,
+  stationHiddenResources: string
 }
 
 export interface Resources {
+  isNone: boolean
   metal: number
   gas: number
   crystal: number
@@ -37,6 +39,7 @@ export class SpyReport {
     const stationName = parseStationName(input.spyReportHeader)
     const stationLabour = input.stationLabour
     const stationResources = parseStationResources(input.stationResources)
+    const stationHiddenResources = parseStationResources(input.stationHiddenResources)
 
     return new SpyReport(
       id,
@@ -46,7 +49,8 @@ export class SpyReport {
       captureDefense,
       stationName,
       stationLabour,
-      stationResources
+      stationResources,
+      stationHiddenResources
     )
   }
 
@@ -57,7 +61,8 @@ export class SpyReport {
               public readonly captureDefense: string,
               public readonly stationName: string,
               public readonly stationLabour: string,
-              public readonly stationResources: Resources
+              public readonly stationResources: Resources,
+              public readonly stationHiddenResources: Resources
   ) {
     // TODO: private stationResources: string[],
     // private buildings: string[],

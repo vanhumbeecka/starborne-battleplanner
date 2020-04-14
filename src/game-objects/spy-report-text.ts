@@ -1,5 +1,5 @@
 import Scene = Phaser.Scene
-import {SpyReport} from '../models/spy-report'
+import {Resources, SpyReport} from '../models/spy-report'
 
 export class SpyReportText extends Phaser.GameObjects.Text {
 
@@ -40,12 +40,34 @@ export class SpyReportText extends Phaser.GameObjects.Text {
       lastReport.captureDefense,
       lastReport.stationLabour,
       '',
-      ...reports.map(r => `(${r.submitted.fromNow()}) Metal: ${r.stationResources.metal} - Gas: ${r.stationResources.gas} - Crystal: ${r.stationResources.crystal}`),
-      ''
+      'Station Resources:',
+      ...this.displayResources(reports),
+      '',
+      'Station Hidden Resources:',
+      ...this.displayResources(reports, true)
     ])
   }
 
   removeReports(): void {
     this.setText('')
+  }
+
+  private displayResources(reports: SpyReport[], isHidden: boolean = false): string[] {
+    return reports.map(r => {
+      let resources: Resources
+      if (isHidden) {
+        resources = r.stationHiddenResources
+      } else {
+        resources = r.stationResources
+      }
+      if (resources.isNone) {
+        return `(${r.submitted.fromNow()}) None`
+      }
+      return this.getResourcesString(r.submitted.fromNow(), resources)
+    })
+  }
+
+  private getResourcesString(fromNow: string, resources: Resources): string {
+    return `(${fromNow}) Metal: ${resources.metal} - Gas: ${resources.gas} - Crystal: ${resources.crystal}`
   }
 }

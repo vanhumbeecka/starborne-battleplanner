@@ -49,6 +49,15 @@ export const parseStationName = (raw: string): string => {
 }
 
 export const parseStationResources = (raw: string): Resources | undefined => {
+  if (raw.startsWith('None')) {
+    return {
+      isNone: true,
+      crystal: 0,
+      metal: 0,
+      gas: 0
+    }
+  }
+
   const regex = /Metal\s([0-9]+)\s.*Gas\s([0-9]+)\s.*Crystal\s([0-9]+)\s/
   const result = regex.exec(raw)
   if (!result || result.length === 0) {
@@ -57,6 +66,7 @@ export const parseStationResources = (raw: string): Resources | undefined => {
   }
 
   return {
+    isNone: false,
     metal: Number(result[1]),
     gas: Number(result[2]),
     crystal: Number(result[3])
@@ -89,6 +99,8 @@ const generateSpyReport = (cells: GsCell[], col: number): SpyReport | undefined 
   const stationResources = findCellDataByRow(reportCells, 12)
   const stationLabour = findCellDataByRow(reportCells, 14)
 
+  const stationHiddenResourcesArray = findCellDataBetweenContent(reportCells, 'Station Hidden Resources', 'Outposts')
+
   // TODO: buildings, fleets, hangar, ...
 
   return SpyReport.fromRawReport({
@@ -101,7 +113,8 @@ const generateSpyReport = (cells: GsCell[], col: number): SpyReport | undefined 
     spyReportHeader2,
     captureDefense,
     stationResources,
-    stationLabour
+    stationLabour,
+    stationHiddenResources: stationHiddenResourcesArray[0]
   })
 }
 
@@ -111,4 +124,15 @@ const findCellDataByRow = (cells: GsCell[], row: number): string | undefined => 
     return undefined
   }
   return cell.inputValue
+}
+
+const findCellDataBetweenContent = (cells: GsCell[], fromStartsWith: string, toStartsWith: string): string[] => {
+  const cellIndexStart = cells.findIndex(c => c.inputValue.startsWith(fromStartsWith))
+  const cellIndexEnd = cells.findIndex(c => c.inputValue.startsWith(toStartsWith))
+
+  const results = cells.slice(cellIndexStart + 1, cellIndexEnd)
+  if (!results) {
+    return []
+  }
+  return results.map(r => r.inputValue)
 }

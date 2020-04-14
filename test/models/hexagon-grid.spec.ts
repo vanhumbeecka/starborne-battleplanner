@@ -31,7 +31,7 @@ describe('HexagonGrid', () => {
   })
 
   describe('with depth of 2', () => {
-    it('should create a grid of 7 hexes', () => {
+    it('should create a grid of 19 hexes', () => {
       const grid = new HexagonGrid(2, 10)
 
       expect(grid.hexes.size, grid.toString()).to.have.equal(19)
