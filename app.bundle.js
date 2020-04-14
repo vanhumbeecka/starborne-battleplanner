@@ -747,6 +747,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var lodash_1 = __webpack_require__(/*! lodash */ "./node_modules/lodash/lodash.js");
 var SpyReportText = /** @class */ (function (_super) {
     __extends(SpyReportText, _super);
     function SpyReportText(scene, gameWidth, fromTop) {
@@ -773,22 +774,35 @@ var SpyReportText = /** @class */ (function (_super) {
         this.setText(__spreadArrays([
             lastReport.stationName + " " + lastReport.coordinates.toString(),
             '',
-            '---',
+            '===',
             '',
             "Spied " + reports.length + " times.",
             "Last report " + lastReport.submitted.fromNow(),
             "report IDs (" + reports.map(function (r) { return r.id; }).join(', ') + ")",
             '',
-            '---',
-            '',
             lastReport.captureDefense,
             lastReport.stationLabour,
             '',
-            'Station Resources:'
+            '',
+            '=== Resources ===',
+            ''
         ], this.displayResources(reports), [
             '',
-            'Station Hidden Resources:'
-        ], this.displayResources(reports, true)));
+            'Hidden Resources'
+        ], this.displayResources(reports, true), [
+            '',
+            '',
+            "=== Outposts (" + lastReport.submitted.fromNow() + ") ===",
+            ''
+        ], this.displayOutposts(lastReport), [
+            '',
+            '',
+            '=== Fleets ===',
+            ''
+        ], this.displayFleets(reports), [
+            '',
+            ''
+        ]));
     };
     SpyReportText.prototype.removeReports = function () {
         this.setText('');
@@ -808,6 +822,21 @@ var SpyReportText = /** @class */ (function (_super) {
                 return "(" + r.submitted.fromNow() + ") None";
             }
             return _this.getResourcesString(r.submitted.fromNow(), resources);
+        });
+    };
+    SpyReportText.prototype.displayOutposts = function (report) {
+        return report.outposts.map(function (o) { return o.name + " - " + o.level; });
+    };
+    SpyReportText.prototype.displayFleets = function (reports) {
+        return lodash_1.flatMap(reports, function (report) {
+            if (report.fleets.length === 0) {
+                return [];
+            }
+            return __spreadArrays([
+                "(" + report.submitted.fromNow() + ")"
+            ], report.fleets.map(function (f) { return f.count + " " + f.type; }), [
+                ''
+            ]);
         });
     };
     SpyReportText.prototype.getResourcesString = function (fromNow, resources) {
@@ -1068,10 +1097,10 @@ exports.Pixel = Pixel;
 
 /***/ }),
 
-/***/ "./src/models/spy-report.ts":
-/*!**********************************!*\
-  !*** ./src/models/spy-report.ts ***!
-  \**********************************/
+/***/ "./src/models/spy-report/spy-report.ts":
+/*!*********************************************!*\
+  !*** ./src/models/spy-report/spy-report.ts ***!
+  \*********************************************/
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -1079,9 +1108,9 @@ exports.Pixel = Pixel;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var moment = __webpack_require__(/*! moment-timezone */ "./node_modules/moment-timezone/index.js");
-var spy_report_utils_1 = __webpack_require__(/*! ../utils/spy-report-utils */ "./src/utils/spy-report-utils.ts");
+var spy_report_utils_1 = __webpack_require__(/*! ../../utils/spy-report-utils */ "./src/utils/spy-report-utils.ts");
 var SpyReport = /** @class */ (function () {
-    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources) {
+    function SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources, outposts, fleets, hangar) {
         this.id = id;
         this.submitted = submitted;
         this.isPlayer = isPlayer;
@@ -1091,6 +1120,9 @@ var SpyReport = /** @class */ (function () {
         this.stationLabour = stationLabour;
         this.stationResources = stationResources;
         this.stationHiddenResources = stationHiddenResources;
+        this.outposts = outposts;
+        this.fleets = fleets;
+        this.hangar = hangar;
         // TODO: private stationResources: string[],
         // private buildings: string[],
         // private hiddenResources: string[],
@@ -1112,7 +1144,10 @@ var SpyReport = /** @class */ (function () {
         var stationLabour = input.stationLabour;
         var stationResources = spy_report_utils_1.parseStationResources(input.stationResources);
         var stationHiddenResources = spy_report_utils_1.parseStationResources(input.stationHiddenResources);
-        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources);
+        var outposts = spy_report_utils_1.parseOutposts(input.outposts);
+        var fleets = spy_report_utils_1.parseFleets(input.fleets);
+        var hangar = spy_report_utils_1.parseFleets(input.hangar);
+        return new SpyReport(id, submitted, isPlayer, coordinates, captureDefense, stationName, stationLabour, stationResources, stationHiddenResources, outposts, fleets, hangar);
     };
     return SpyReport;
 }());
@@ -1240,6 +1275,7 @@ var spy_report_utils_1 = __webpack_require__(/*! ../utils/spy-report-utils */ ".
 var spy_report_text_1 = __webpack_require__(/*! ../game-objects/spy-report-text */ "./src/game-objects/spy-report-text.ts");
 var Coordinate_1 = __webpack_require__(/*! ../models/Coordinate */ "./src/models/Coordinate.ts");
 var Color = Phaser.Display.Color;
+var spy_report_factory_1 = __webpack_require__(/*! ../utils/spy-report-factory */ "./src/utils/spy-report-factory.ts");
 var sceneConfig = {
     active: false,
     visible: false,
@@ -1268,7 +1304,7 @@ var HexagonScene = /** @class */ (function (_super) {
         this.cameras.main.backgroundColor = new Color(0, 0, 0);
         // models
         var grid = hexagon_grid_1.HexagonGrid.fromGameWidth(500, this.width / 2);
-        var spyReports = spy_report_utils_1.generateReports(this.cache.json.get('spyReportData'));
+        var spyReports = spy_report_factory_1.generateReports(this.cache.json.get('spyReportData'));
         var spyReportsByCoordinate = spy_report_utils_1.binSpyReportsByCoordinate(spyReports);
         // game objects
         var gridGameObject = hexagon_grid_container_1.HexagonGridGameObject.fromGrid(this, grid, spyReportsByCoordinate);
@@ -1444,6 +1480,65 @@ exports.MenuButton = MenuButton;
 
 /***/ }),
 
+/***/ "./src/utils/spy-report-factory.ts":
+/*!*****************************************!*\
+  !*** ./src/utils/spy-report-factory.ts ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var spy_report_1 = __webpack_require__(/*! ../models/spy-report/spy-report */ "./src/models/spy-report/spy-report.ts");
+var spy_report_utils_1 = __webpack_require__(/*! ./spy-report-utils */ "./src/utils/spy-report-utils.ts");
+exports.generateReports = function (input) {
+    var cells = input.feed.entry.map(function (e) { return e.gs$cell; });
+    // Eastern Time (US > UTC-4)
+    var row2cells = cells.filter(function (c) { return Number(c.row) === 2; });
+    var idCells = row2cells.filter(function (c) { return !!c && Number(c.col) >= 4; });
+    var spyReportColumns = idCells.map(function (c) { return Number(c.col); });
+    var reports = spyReportColumns.map(function (col) { return generateSpyReport(cells, col); });
+    return reports.filter(function (r) { return !!r; });
+};
+var generateSpyReport = function (cells, col) {
+    var reportCells = cells.filter(function (c) { return Number(c.col) === col; });
+    var id = spy_report_utils_1.findCellDataByRow(reportCells, 2);
+    var dateSubmitted = spy_report_utils_1.findCellDataByRow(reportCells, 3);
+    var whoSubmitted = spy_report_utils_1.findCellDataByRow(reportCells, 4);
+    var dateSpied = spy_report_utils_1.findCellDataByRow(reportCells, 5);
+    var whoSpied = spy_report_utils_1.findCellDataByRow(reportCells, 6);
+    var spyReportHeader = spy_report_utils_1.findCellDataByRow(reportCells, 7);
+    var spyReportHeader2 = spy_report_utils_1.findCellDataByRow(reportCells, 8);
+    var captureDefense = spy_report_utils_1.findCellDataByRow(reportCells, 10);
+    var stationResources = spy_report_utils_1.findCellDataByRow(reportCells, 12);
+    var stationLabour = spy_report_utils_1.findCellDataByRow(reportCells, 14);
+    var stationHiddenResourcesArray = spy_report_utils_1.findCellDataBetweenContent(reportCells, 'Station Hidden Resources', 'Outposts');
+    var outposts = spy_report_utils_1.findCellDataBetweenContent(reportCells, 'Outposts', 'Fleets');
+    var fleets = spy_report_utils_1.findCellDataBetweenContent(reportCells, 'Fleets', 'Hangar');
+    // const hangar = findCellDataBetweenContent(reportCells, 'Hangar', null)
+    // TODO: buildings, fleets, hangar, ...
+    return spy_report_1.SpyReport.fromRawReport({
+        id: id,
+        dateSubmitted: dateSubmitted,
+        whoSubmitted: whoSubmitted,
+        dateSpied: dateSpied,
+        whoSpied: whoSpied,
+        spyReportHeader: spyReportHeader,
+        spyReportHeader2: spyReportHeader2,
+        captureDefense: captureDefense,
+        stationResources: stationResources,
+        stationLabour: stationLabour,
+        stationHiddenResources: stationHiddenResourcesArray[0],
+        outposts: outposts,
+        fleets: fleets,
+        hangar: []
+    });
+};
+
+
+/***/ }),
+
 /***/ "./src/utils/spy-report-utils.ts":
 /*!***************************************!*\
   !*** ./src/utils/spy-report-utils.ts ***!
@@ -1461,7 +1556,6 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var spy_report_1 = __webpack_require__(/*! ../models/spy-report */ "./src/models/spy-report.ts");
 var tuple_map_1 = __webpack_require__(/*! ./tuple-map */ "./src/utils/tuple-map.ts");
 var Coordinate_1 = __webpack_require__(/*! ../models/Coordinate */ "./src/models/Coordinate.ts");
 exports.binSpyReportsByCoordinate = function (spyReports) {
@@ -1505,6 +1599,39 @@ exports.parseStationName = function (raw) {
     }
     return result[1];
 };
+exports.parseOutposts = function (raw) {
+    var regex = new RegExp('^(.+)\\s-\\s(Level\\s[0-9\\?])');
+    var buildings = raw.map(function (r) {
+        var output = regex.exec(r);
+        if (!output || output.length !== 3) {
+            console.error('Could not parse outpost for raw: ' + raw.join(' -- '));
+            return undefined;
+        }
+        return {
+            name: output[1],
+            level: output[2]
+        };
+    });
+    return buildings.filter(function (b) { return !!b; });
+};
+exports.parseFleets = function (raw) {
+    var regex = /^([0-9]+)\s(.+)$/;
+    var result = raw.map(function (r) {
+        var output = regex.exec(r);
+        if (!output || output.length === 0) {
+            console.error('Could not parse fleet string: ' + raw.join(' -- '));
+            return undefined;
+        }
+        return {
+            count: Number(output[1]),
+            type: output[2]
+        };
+    });
+    return result.filter(function (r) { return !!r; });
+};
+exports.parseHangar = function (raw) {
+    return [];
+};
 exports.parseStationResources = function (raw) {
     if (raw.startsWith('None')) {
         return {
@@ -1527,51 +1654,14 @@ exports.parseStationResources = function (raw) {
         crystal: Number(result[3])
     };
 };
-exports.generateReports = function (input) {
-    var cells = input.feed.entry.map(function (e) { return e.gs$cell; });
-    // Eastern Time (US > UTC-4)
-    var row2cells = cells.filter(function (c) { return Number(c.row) === 2; });
-    var idCells = row2cells.filter(function (c) { return !!c && Number(c.col) >= 4; });
-    var spyReportColumns = idCells.map(function (c) { return Number(c.col); });
-    var reports = spyReportColumns.map(function (col) { return generateSpyReport(cells, col); });
-    return reports.filter(function (r) { return !!r; });
-};
-var generateSpyReport = function (cells, col) {
-    var reportCells = cells.filter(function (c) { return Number(c.col) === col; });
-    var id = findCellDataByRow(reportCells, 2);
-    var dateSubmitted = findCellDataByRow(reportCells, 3);
-    var whoSubmitted = findCellDataByRow(reportCells, 4);
-    var dateSpied = findCellDataByRow(reportCells, 5);
-    var whoSpied = findCellDataByRow(reportCells, 6);
-    var spyReportHeader = findCellDataByRow(reportCells, 7);
-    var spyReportHeader2 = findCellDataByRow(reportCells, 8);
-    var captureDefense = findCellDataByRow(reportCells, 10);
-    var stationResources = findCellDataByRow(reportCells, 12);
-    var stationLabour = findCellDataByRow(reportCells, 14);
-    var stationHiddenResourcesArray = findCellDataBetweenContent(reportCells, 'Station Hidden Resources', 'Outposts');
-    // TODO: buildings, fleets, hangar, ...
-    return spy_report_1.SpyReport.fromRawReport({
-        id: id,
-        dateSubmitted: dateSubmitted,
-        whoSubmitted: whoSubmitted,
-        dateSpied: dateSpied,
-        whoSpied: whoSpied,
-        spyReportHeader: spyReportHeader,
-        spyReportHeader2: spyReportHeader2,
-        captureDefense: captureDefense,
-        stationResources: stationResources,
-        stationLabour: stationLabour,
-        stationHiddenResources: stationHiddenResourcesArray[0]
-    });
-};
-var findCellDataByRow = function (cells, row) {
+exports.findCellDataByRow = function (cells, row) {
     var cell = cells.find(function (c) { return Number(c.row) === row; });
     if (!cell) {
         return undefined;
     }
     return cell.inputValue;
 };
-var findCellDataBetweenContent = function (cells, fromStartsWith, toStartsWith) {
+exports.findCellDataBetweenContent = function (cells, fromStartsWith, toStartsWith) {
     var cellIndexStart = cells.findIndex(function (c) { return c.inputValue.startsWith(fromStartsWith); });
     var cellIndexEnd = cells.findIndex(function (c) { return c.inputValue.startsWith(toStartsWith); });
     var results = cells.slice(cellIndexStart + 1, cellIndexEnd);
