@@ -5,7 +5,7 @@
 *Starborne Battleplanner* shows data on a hexagonal map, using the same coordinate system as [Starborne](https://starborne.com/) itself.
 At the moment, only some spy reports are shown.
 
-Read the accompanying [blogpost](https://codemine.be/posts/20200415-fun-with-phaser/) on how this was build.
+Read the accompanying [blogpost](https://blog.codemine.be/posts/20200415-fun-with-phaser/) on how this was build.
 
 ## Preview
 
